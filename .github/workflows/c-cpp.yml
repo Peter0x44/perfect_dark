@@ -121,6 +121,47 @@ jobs:
           path: bin/
           retention-days: 0
 
+  build-arm64-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - name: Install MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: CLANGARM64
+          update: true
+          install: >-
+            git
+            make
+            mingw-w64-clang-aarch64-toolchain
+            mingw-w64-clang-aarch64-SDL2
+            mingw-w64-clang-aarch64-zlib
+            mingw-w64-clang-aarch64-cmake
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Build pd.arm64.exe
+        run: cmake -G"Unix Makefiles" -Bbuild . && cmake --build build -j
+      - name: Build pd.pal.arm64.exe
+        run: cmake -G"Unix Makefiles" -Bbuild_pal -DROMID=pal-final . && cmake --build build_pal -j
+      - name: Build pd.jpn.arm64.exe
+        run: cmake -G"Unix Makefiles" -Bbuild_jpn -DROMID=jpn-final . && cmake --build build_jpn -j
+      - name: Prepare artifact for packaging
+        run: |
+          mkdir -p bin/data
+          cp build/pd.arm64.exe bin/
+          cp build_pal/pd.pal.arm64.exe bin/
+          cp build_jpn/pd.jpn.arm64.exe bin/
+          cp /clangarm64/bin/{SDL2.dll,zlib1.dll,libunwind.dll,libc++.dll} bin/
+          touch bin/data/put_your_rom_here.txt
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pd-arm64-windows
+          path: bin/
+          retention-days: 0
+
   build-x86_64-linux:
     runs-on: ubuntu-latest
     steps:
@@ -302,7 +343,7 @@ jobs:
   publish-latest-build:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/port'
-    needs: [build-i686-windows, build-i686-linux, build-x86_64-windows, build-x86_64-linux, build-arm64-nswitch, build-x86_64-osx, build-arm64-osx, build-flatpak-bundle]
+    needs: [build-i686-windows, build-i686-linux, build-x86_64-windows, build-arm64-windows, build-x86_64-linux, build-arm64-nswitch, build-x86_64-osx, build-arm64-osx, build-flatpak-bundle]
     permissions:
       contents: write
     steps:
@@ -322,6 +363,7 @@ jobs:
           tar cJf ../ci-release/pd-arm64-osx.tar.xz pd-arm64-osx
           zip -r ../ci-release/pd-i686-windows.zip pd-i686-windows
           zip -r ../ci-release/pd-x86_64-windows.zip pd-x86_64-windows
+          zip -r ../ci-release/pd-arm64-windows.zip pd-arm64-windows
           zip -r ../ci-release/pd-arm64-nswitch.zip pd-arm64-nswitch
           mv io.github.fgsfdsfgs.perfect_dark.flatpak/io.github.fgsfdsfgs.perfect_dark.flatpak ../ci-release/
           popd

@@ -130,23 +130,48 @@ jobs:
       - name: Install MSYS2
         uses: msys2/setup-msys2@v2
         with:
-          msystem: CLANGARM64
+          msystem: UCRT64
           update: true
           install: >-
             git
             make
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-clang
+            mingw-w64-ucrt-x86_64-lld
             mingw-w64-clang-aarch64-toolchain
             mingw-w64-clang-aarch64-SDL2
             mingw-w64-clang-aarch64-zlib
-            mingw-w64-clang-aarch64-cmake
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Build pd.arm64.exe
-        run: cmake -G"Unix Makefiles" -Bbuild . && cmake --build build -j
+        run: |
+          export PATH="/ucrt64/bin:$PATH"
+          cmake -G"Unix Makefiles" -Bbuild \
+            -DCMAKE_C_COMPILER=/clangarm64/bin/clang.exe \
+            -DCMAKE_CXX_COMPILER=/clangarm64/bin/clang++.exe \
+            -DCMAKE_SYSTEM_NAME=Windows \
+            -DCMAKE_SYSTEM_PROCESSOR=ARM64 .
+          cmake --build build -j
       - name: Build pd.pal.arm64.exe
-        run: cmake -G"Unix Makefiles" -Bbuild_pal -DROMID=pal-final . && cmake --build build_pal -j
+        run: |
+          export PATH="/ucrt64/bin:$PATH"
+          cmake -G"Unix Makefiles" -Bbuild_pal \
+            -DCMAKE_C_COMPILER=/clangarm64/bin/clang.exe \
+            -DCMAKE_CXX_COMPILER=/clangarm64/bin/clang++.exe \
+            -DCMAKE_SYSTEM_NAME=Windows \
+            -DCMAKE_SYSTEM_PROCESSOR=ARM64 \
+            -DROMID=pal-final .
+          cmake --build build_pal -j
       - name: Build pd.jpn.arm64.exe
-        run: cmake -G"Unix Makefiles" -Bbuild_jpn -DROMID=jpn-final . && cmake --build build_jpn -j
+        run: |
+          export PATH="/ucrt64/bin:$PATH"
+          cmake -G"Unix Makefiles" -Bbuild_jpn \
+            -DCMAKE_C_COMPILER=/clangarm64/bin/clang.exe \
+            -DCMAKE_CXX_COMPILER=/clangarm64/bin/clang++.exe \
+            -DCMAKE_SYSTEM_NAME=Windows \
+            -DCMAKE_SYSTEM_PROCESSOR=ARM64 \
+            -DROMID=jpn-final .
+          cmake --build build_jpn -j
       - name: Prepare artifact for packaging
         run: |
           mkdir -p bin/data
